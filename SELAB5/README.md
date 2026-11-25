@@ -1,4 +1,4 @@
-# Lab 5 – Code & Branch Coverage
+# Lab 6 – Code & Branch Coverage
 
 **SRN:** PES1UG24AM385   
 **Tools:** Python 3.10, pytest, coverage.py
