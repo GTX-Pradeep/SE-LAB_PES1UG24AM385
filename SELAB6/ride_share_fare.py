@@ -1,98 +1,45 @@
-import math
-
-GST_RATE = 1.18
+INCLUDED_KM = {"mini": 5, "sedan": 8, "suv": 12}
 
 
-def _to_number(value, as_int=False):
-    """Convert a string to a finite, non-negative number. Return None if invalid."""
-    if not isinstance(value, str):
-        return None
-    value = value.strip()
-    if value == "":
-        return None
-    try:
-        number = int(value) if as_int else float(value)
-    except (ValueError, OverflowError):
-        return None
-    if isinstance(number, float) and not math.isfinite(number):
-        return None          # rejects nan, inf, -inf, 1e400
-    if number < 0:
-        return None          # negative distance / fare / promo makes no sense
-    return number
-
-
-def parse_trip(text):
-    """'sedan:12' -> ('Sedan', 12.0). Returns None for invalid input."""
-    if not isinstance(text, str):
-        return None
-    parts = text.split(':')
-    if len(parts) != 2:
-        return None
-    cab = parts[0].strip()
-    km = _to_number(parts[1])
-    if cab == "" or km is None:
-        return None
-    return cab.title(), km
-
-
-def fare_average(fares_csv):
-    """'120,95,210' -> 141. Returns None for invalid input."""
-    if not isinstance(fares_csv, str) or fares_csv.strip() == "":
-        return None
-    values = []
-    for item in fares_csv.split(','):
-        number = _to_number(item, as_int=True)
-        if number is None:
-            return None
-        values.append(number)
-    if not values:          # guards against ZeroDivisionError
-        return None
-    return sum(values) // len(values)
-
-
-def payable_fare(text):
-    """'250|30' -> 265.0 (fare + 18% GST - promo, never below 0). None if invalid."""
-    if not isinstance(text, str):
-        return None
-    parts = text.split('|')
-    if len(parts) != 2:
-        return None
-    fare = _to_number(parts[0])
-    promo = _to_number(parts[1])
-    if fare is None or promo is None:
-        return None
-    total = fare * GST_RATE - promo
-    if not math.isfinite(total):
-        return None          # overflow for extremely large fares
-    return max(total, 0)
-
-
-def _show(label, result, error_msg):
-    if result is None:
-        print(f"Invalid input: {error_msg}")
+def extra_distance_fare(cab_type, distance_km, zone, is_subscriber):
+    if cab_type not in INCLUDED_KM:
+        raise ValueError("unknown cab type")
+    if distance_km < 0:
+        raise ValueError("invalid distance")
+    included = INCLUDED_KM[cab_type]
+    if is_subscriber and cab_type != "suv":
+        included += 3
+    extra = distance_km - included
+    if extra <= 0:
+        return 0
+    if zone == "city":
+        rate = 12
     else:
-        print(label, result)
+        rate = 18
+    if extra > 20:
+        rate = rate + 8
+        if zone == "outstation":
+            rate += 4
+    return extra * rate
 
 
-def main():
-    try:
-        print("==== Running parse_trip ====")
-        user_input = input("Enter cab:distance in km (e.g. sedan:12): ")
-        _show("Cab and Distance:", parse_trip(user_input),
-              "use the format cab:distance with a non-negative number")
-
-        print("\n==== Running fare_average ====")
-        user_input = input("Enter fares as CSV (e.g. 120,95,210): ")
-        _show("Average Fare:", fare_average(user_input),
-              "enter non-negative whole numbers separated by commas")
-
-        print("\n==== Running payable_fare ====")
-        user_input = input("Enter fare|promo (e.g. 250|30): ")
-        _show("Payable Fare:", payable_fare(user_input),
-              "use the format fare|promo with non-negative numbers")
-    except (EOFError, KeyboardInterrupt):
-        print("\nInput ended. Exiting.")
+def seats_and_bags_ok(passengers, bags, needs_wheelchair):
+    if needs_wheelchair:
+        return passengers <= 2
+    if passengers > 4:
+        return False
+    return bags <= 2
 
 
-if __name__ == "__main__":
-    main()
+def pickup_status(minutes_early, is_scheduled, is_airport):
+    if is_scheduled:
+        cutoff = 10
+    else:
+        cutoff = 5
+    if is_airport:
+        cutoff += 10
+    if minutes_early >= cutoff:
+        return "on_time"
+    elif minutes_early >= cutoff - 15:
+        return "delayed"
+    return "missed"

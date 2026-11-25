@@ -1,30 +1,43 @@
-# Lab 7: Fuzz Testing (Hypothesis) - Ride Share Fare
+# Lab 6 – Code & Branch Coverage
 
-**SRN:** PES1UG24AM385
+**SRN:** PES1UG24AM385   
+**Tools:** Python 3.10, pytest, coverage.py
 
-| File | What it is |
-|------|------------|
-| `ride_share_fare.py` | Fixed application (hardened input validation) |
-| `ride_share_fare_original_buggy.py` | Original buggy code, kept for reference |
-| `test_ride_share_fare.py` | Hypothesis fuzz tests for all three functions |
-| `Lab7_FuzzTesting_PES1UG24AM385.pdf` | Report with screenshots for every step |
-| `screenshots/` | Individual screenshots |
+## Objective
+Write test cases for `ride_share_fare.py` so that both code (line) coverage and branch coverage reach at least 90%.
 
-## Run
+## Files
+| File | Description |
+|---|---|
+| `ride_share_fare.py` | Application under test |
+| `test_ride_share_fare.py` | Starter test file |
+| `CodeCoverageTest_PES1UG24AM385_ride_share_fare.py` | Test cases for code coverage |
+| `BranchCoverageTest_PES1UG24AM385_ride_share_fare.py` | Test cases for branch coverage |
+| `screenshots/` | Coverage report screenshots |
+
+## Results
+| Test suite | Tests | Line coverage | Branch coverage |
+|---|:---:|:---:|:---:|
+| Starter | 2 | 38% | 32% |
+| Code coverage | 11 | **100%** | 98% |
+| Branch coverage | 28 | **100%** | **100%** |
+
+### Code Coverage
+![Code coverage](screenshots/code_coverage.PNG)
+
+### Branch Coverage
+![Branch coverage](screenshots/branch_coverage.PNG)
+
+## Observation
+The code coverage suite runs every line, but one branch is never taken: a long trip in a zone that is neither `city` nor `outstation`. The branch coverage suite adds a test for this case, which brings branch coverage to 100%. This shows that full line coverage does not mean every decision has been tested.
+
+## How to Run
+```bash
+pip install coverage pytest
+
+python -m coverage run -m pytest CodeCoverageTest_PES1UG24AM385_ride_share_fare.py
+python -m coverage report -m
+
+python -m coverage run --branch -m pytest BranchCoverageTest_PES1UG24AM385_ride_share_fare.py
+python -m coverage report -m
 ```
-pip install hypothesis pytest
-python ride_share_fare.py
-python -m pytest test_ride_share_fare.py -v
-```
-
-## Bugs found by fuzzing
-- `None` input crashed all three functions (`AttributeError`)
-- Empty input / missing `:` or `|` separator: `ValueError` on unpacking
-- Empty number (`':'`, `''` in CSV): `ValueError` on conversion
-- Empty cab name, negative distance and negative fares were accepted
-- Also hardened: `nan`, `inf`, `1e400`, negative promo, extra separators, float overflow
-
-## Fix
-Each function checks that the input is a string and has the right number of parts, converts numbers through a helper that rejects empty, non-numeric, non-finite and negative values, and returns `None` for invalid input. `main()` prints a friendly message instead of crashing.
-
-Result: 3 failed before the fix, 3 passed after it.
